@@ -125,8 +125,9 @@ std::vector<std::pair<std::string, std::vector<TB_Button>>> tbButtons{
 //CancelShutdown identifier is used in winuser.h
 void DoCancelShutdown()
 {
-	if (programState != Shutdown)
+	if (programState != Shutdown) {
 		return;
+	}
 
 	glfwSetWindowShouldClose(window, false);
 	programState = Run;
@@ -136,11 +137,13 @@ void DoCancelShutdown()
 
 void DoReloadFile()
 {
-	if (activeTab < 0)
+	if (activeTab < 0) {
 		return;
+	}
 	auto& tab = fileTabs[activeTab];
-	if (tab.fname == "" || !fs::is_regular_file(tab.fname))
+	if (tab.fname == "" || !fs::is_regular_file(tab.fname)) {
 		return;
+	}
 
 	std::map<std::string, std::string> params;
 	tab.rootNode = tab.codeGen.Import(tab.fname, params, messageBox.error);
@@ -169,16 +172,19 @@ void DoReloadFile()
 
 void ReloadFile()
 {
-	if (activeTab < 0)
+	if (activeTab < 0) {
 		return;
+	}
 	auto& tab = fileTabs[activeTab];
-	if (tab.fname == "" || !fs::is_regular_file(tab.fname))
+	if (tab.fname == "" || !fs::is_regular_file(tab.fname)) {
 		return;
+	}
 	auto time1 = fs::last_write_time(tab.fname);
 	std::error_code err;
 	auto time2 = fs::last_write_time(tab.codeGen.AltFName(tab.fname), err);
-	if (time1 == tab.time[0] && time2 == tab.time[1])
+	if (time1 == tab.time[0] && time2 == tab.time[1]) {
 		return;
+	}
 	tab.time[0] = time1;
 	tab.time[1] = time2;
 
@@ -190,8 +196,9 @@ void ReloadFile()
 		messageBox.buttons = ImRad::Yes | ImRad::No;
 
 		messageBox.OpenPopup([&](ImRad::ModalResult mr) {
-			if (mr == ImRad::Yes)
+			if (mr == ImRad::Yes) {
 				DoReloadFile();
+			}
 			});
 	}
 	else {
@@ -203,10 +210,12 @@ void ActivateTab(int i)
 {
 	/*doesn't work when activeTab is closed
 	std::string lastStyle;
-	if (activeTab >= 0)
-		lastStyle = fileTabs[activeTab].styleName;*/
-	if (i >= fileTabs.size())
+	if (activeTab >= 0) {
+		lastStyle = fileTabs[activeTab].styleName;
+	}*/
+	if (i >= fileTabs.size()) {
 		i = (int)fileTabs.size() - 1;
+	}
 	if (i < 0) {
 		activeTab = -1;
 		ctx.selected.clear();
@@ -219,8 +228,9 @@ void ActivateTab(int i)
 	ctx.codeGen = &tab.codeGen;
 	ReloadFile();
 
-	if (programState != Shutdown)
+	if (programState != Shutdown) {
 		reloadStyle = true;
+	}
 }
 
 void NewFile(TopWindow::Kind k)
@@ -238,25 +248,28 @@ void NewFile(TopWindow::Kind k)
 
 void CopyFileReplace(const std::string& from, const std::string& to, std::vector<std::pair<std::string, std::string>>& repl)
 {
-	std::ifstream fin(from);
-	if (!fin)
+	std::ifstream fromStream(from);
+	if (!fromStream) {
 		throw std::runtime_error("can't read from " + from);
-	std::ofstream fout(to);
-	if (!fout)
+	}
+	std::ofstream toStream(to);
+	if (!toStream) {
 		throw std::runtime_error("can't write to " + to);
-	
+	}
 	std::string line;
-	while (std::getline(fin, line)) 
+	while (std::getline(fromStream, line)) 
 	{
 		size_t i = 0;
 		while (true) 
 		{
 			i = line.find("${", i);
-			if (i == std::string::npos)
+			if (i == std::string::npos) {
 				break;
+			}
 			size_t j = line.find("}", i);
-			if (j == std::string::npos)
+			if (j == std::string::npos) {
 				break;
+			}
 			for (const auto& r : repl)
 				if (!line.compare(i + 2, j - i - 2, r.first)) {
 					line.replace(line.begin() + i, line.begin() + j + 1, r.second);
@@ -265,7 +278,7 @@ void CopyFileReplace(const std::string& from, const std::string& to, std::vector
 				}
 			i = j;
 		}
-		fout << line << "\n";
+		toStream << line << "\n";
 	}
 }
 
@@ -274,19 +287,22 @@ void DoNewTemplate(int type, const std::string& name)
 	nfdchar_t *outPath = NULL;
 	nfdfilteritem_t filterItem[1] = { { (const nfdchar_t *)"Source code", (const nfdchar_t *)"cpp" } };
 	nfdresult_t result = NFD_SaveDialog(&outPath, filterItem, 1, nullptr, "main.cpp");
-	if (result != NFD_OKAY)
+	if (result != NFD_OKAY) {
 		return;
+	}
 	fs::path p = outPath;
 	NFD_FreePath(outPath);
-	if (!p.has_extension())
+	if (!p.has_extension()) {
 		p.replace_extension(".cpp");
+	}
 
 	try {
 		switch (type)
 		{
-		case 0:
+		case 0: {
 			fs::copy_file(rootPath + "/template/glfw/main.cpp", p, fs::copy_options::overwrite_existing);
 			break;
+		}
 		case 1: {
 			std::string jni = name;
 			stx::replace(jni, '.', '_');
@@ -306,6 +322,7 @@ void DoNewTemplate(int type, const std::string& name)
 			CopyFileReplace(rootPath + "/template/android/AndroidManifest.xml", p.replace_filename("AndroidManifest.xml").string(), repl);
 			break;
 		}
+			// default: { throw std::runtime_error("Unexpected controll flow occured"); } // TODO double check this shouldn't ever happen
 		}
 	}
 	catch (std::exception& e) {
@@ -327,16 +344,17 @@ void NewTemplate(int type)
 			DoNewTemplate(type, inputName.name);
 			});
 	}
-	else
+	else {
 		DoNewTemplate(type, "");
+	}
 }
 
 void DoOpenFile(const std::string& path, std::string* errs = nullptr)
 {
 	if (!fs::is_regular_file(path)) {
-		if (errs)
+		if (errs) {
 			*errs += "Can't read '" + path + "'\n";
-		else {
+		} else {
 			messageBox.title = "ImRAD";
 			messageBox.message = "Can't read '" + path + "'";
 			messageBox.buttons = ImRad::Ok;
@@ -357,9 +375,9 @@ void DoOpenFile(const std::string& path, std::string* errs = nullptr)
 	pit = params.find("unit");
 	file.unit = pit == params.end() ? DEFAULT_UNIT : pit->second;
 	if (!file.rootNode) {
-		if (errs)
+		if (errs) {
 			*errs += "Unsuccessful import of '" + path + "'\n";
-		else {
+		} else {
 			messageBox.title = "CodeGen";
 			messageBox.message = "Unsuccessful import because of errors";
 			messageBox.buttons = ImRad::Ok;
@@ -372,10 +390,11 @@ void DoOpenFile(const std::string& path, std::string* errs = nullptr)
 		return st.first == file.styleName;
 		});
 	if (!styleFound) {
-		if (errs)
+		if (errs) {
 			*errs += "Uknown style \"" + file.styleName + "\" used in '" + path + "'\n";
-		else
-			messageBox.error = "Unknown style \"" + file.styleName + "\" used\n" + messageBox.error; 
+		} else {
+			messageBox.error = "Unknown style \"" + file.styleName + "\" used\n" + messageBox.error;
+		}
 		file.styleName = DEFAULT_STYLE;
 	}
 
@@ -389,9 +408,9 @@ void DoOpenFile(const std::string& path, std::string* errs = nullptr)
 	ActivateTab(idx);
 
 	if (messageBox.error != "") {
-		if (errs)
+		if (errs) {
 			*errs += messageBox.error + "\n";
-		else {
+		} else {
 			messageBox.title = "CodeGen";
 			messageBox.message = "Import finished with errors";
 			messageBox.buttons = ImRad::Ok;
@@ -405,8 +424,9 @@ void OpenFile()
 	nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Headers", "h,hpp" } };
     nfdresult_t result = NFD_OpenDialog(&outPath, filterItem, 1, nullptr);
-	if (result != NFD_OKAY)
+	if (result != NFD_OKAY) {
 		return;
+	}
 	
 	ctx.mode = UIContext::NormalSelection;
 	ctx.selected.clear();
@@ -419,8 +439,9 @@ void OpenFile()
 			messageBox.message = "Reload and lose unsaved changes?";
 			messageBox.buttons = ImRad::Yes | ImRad::No;
 			messageBox.OpenPopup([=](ImRad::ModalResult mr) {
-				if (mr == ImRad::Yes)
+				if (mr == ImRad::Yes) {
 					DoOpenFile(outPath);
+				}
 				});
 		}
 		else {
@@ -442,28 +463,32 @@ void DoCloseFile()
 	ctx.selected.clear();
 	fileTabs.erase(fileTabs.begin() + activeTab);
 	ActivateTab(activeTab);
-	if (programState == Shutdown)
+	if (programState == Shutdown) {
 		CloseFile();
+	}
 }
 
 void CloseFile()
 {
-	if (activeTab < 0)
+	if (activeTab < 0) {
 		return;
+	}
 	if (fileTabs[activeTab].modified) {
 		messageBox.title = "Confirmation";
 		std::string fname = fs::path(fileTabs[activeTab].fname).filename().string();
-		if (fname.empty())
+		if (fname.empty()) {
 			fname = UNTITLED;
+		}
 		messageBox.message = "Save changes to " + fname + "?";
 		messageBox.buttons = ImRad::Yes | ImRad::No | ImRad::Cancel;
 		messageBox.OpenPopup([=](ImRad::ModalResult mr) {
-			if (mr == ImRad::Yes)
+			if (mr == ImRad::Yes) {
 				SaveFile(true);
-			else if (mr == ImRad::No)
+			} else if (mr == ImRad::No) {
 				DoCloseFile();
-			else
+			} else {
 				DoCancelShutdown();
+			}
 			});
 	}
 	else {
@@ -498,14 +523,16 @@ void DoSaveFile(bool thenClose)
 		messageBox.message = "Export finished with errors";
 		messageBox.buttons = ImRad::Ok;
 		messageBox.OpenPopup([=](ImRad::ModalResult) {
-			if (thenClose)
+			if (thenClose) {
 				DoCloseFile();
+			}
 			});
 		return;
 	}
 
-	if (thenClose)
+	if (thenClose) {
 		DoCloseFile();
+	}
 }
 
 bool SaveFileAs(bool thenClose)
@@ -545,8 +572,9 @@ bool SaveFileAs(bool thenClose)
 		return false;
 	}
 
-	if (oldName == "")
+	if (oldName.empty()) {
 		tab.codeGen.SetNamesFromId(fs::path(newName).stem().string());
+	}
 	tab.fname = newName;
 	DoSaveFile(thenClose);
 	return true;
@@ -570,16 +598,18 @@ void SaveAll()
 	int tmp = activeTab;
 	for (activeTab = 0; activeTab < fileTabs.size(); ++activeTab)
 	{
-		if (!SaveFile(false))
+		if (!SaveFile(false)) {
 			break;
+		}
 	}
 	activeTab = tmp;
 }
 
 void ShowCode()
 {
-	if (activeTab < 0)
+	if (activeTab < 0) {
 		return;
+	}
 	std::string path = (fs::temp_directory_path() / "imrad-preview.cpp").string();
 	std::ofstream fout(path);
 	ctx.ind = "";
@@ -588,8 +618,9 @@ void ShowCode()
 	
 	if (ctx.errors.size()) {
 		fout << "\n// Export finished with errors\n";
-		for (const std::string& e : ctx.errors)
+		for (const std::string& e : ctx.errors) {
 			fout << "// " << e <<  "\n";
+		}
 	}
 	fout.close();
 	ShellExec(path);
@@ -625,8 +656,9 @@ void NewWidget(const std::string& name)
 		size_t i = 0;
 		for (; i < ctx.root->children.size(); ++i)
 		{
-			if (ctx.root->children[i]->Behavior() & Widget::SnapSides)
+			if (ctx.root->children[i]->Behavior() & Widget::SnapSides) {
 				break;
+			}
 		}
 		popup->label = "ContextMenu" + std::to_string(i + 1);
 		ctx.root->children.insert(ctx.root->children.begin() + i, std::move(popup));
@@ -737,8 +769,9 @@ void GetStyles()
 	};
 	for (fs::directory_iterator it(rootPath + "/style/"); it != fs::directory_iterator(); ++it)
 	{
-		if (it->path().extension() != ".ini")
+		if (it->path().extension() != ".ini") {
 			continue;
+		}
 		styleNames.push_back({ it->path().stem().string(), it->path().string() });
 	}
 }
@@ -771,20 +804,22 @@ GetCtxColors(const std::string& styleName)
 		IM_COL32(0, 255, 0, 255),
 	};
 
-	if (styleName == "Light")
+	if (styleName == "Light") {
 		return light;
-	else if (styleName == "Dark")
+	} else if (styleName == "Dark") {
 		return dark;
-	else
+	} else {
 		return classic;
+	}
 }
 
 void LoadStyle()
 {
 	float faSize = fontSize * 18.f / 20.f;
 	std::string fontPath = rootPath + "/style/" + fontName;
-	if (!reloadStyle)
+	if (!reloadStyle) {
 		return;
+	}
 	
 	reloadStyle = false;
 	auto& io = ImGui::GetIO();
@@ -850,8 +885,9 @@ void LoadStyle()
 					ctx.fontNames.push_back(f.first);
 				}
 				for (const auto& ex : extra) {
-					if (ex.first.compare(0, 13, "imrad.colors."))
+					if (ex.first.compare(0, 13, "imrad.colors.")) {
 						continue;
+					}
 					std::istringstream is(ex.second);
 					int r, g, b, a;
 					is >> r >> g >> b >> a;
@@ -898,12 +934,14 @@ void DoCloneStyle(const std::string& name)
 		if (from == "Classic" || from == "Dark" || from == "Light") 
 		{
 			ImGuiStyle style;
-			if (from == "Dark")
+			if (from == "Dark") {
 				ImGui::StyleColorsDark(&style);
-			else if (from == "Light")
+			}
+			else if (from == "Light") {
 				ImGui::StyleColorsLight(&style);
-			else
+			} else {
 				ImGui::StyleColorsClassic(&style);
+			}
 
 			std::map<std::string, std::string> extra;
 			const auto& colors = GetCtxColors(from);
@@ -924,8 +962,9 @@ void DoCloneStyle(const std::string& name)
 		}
 
 		fileTabs[activeTab].styleName = name;
-		if (!stx::count_if(styleNames, [&](const auto& s) { return s.first == name; }))
+		if (!stx::count_if(styleNames, [&](const auto& s) { return s.first == name; })) {
 			styleNames.push_back({ name, path });
+		}
 
 		messageBox.title = "Style saved";
 		messageBox.message = "New style was saved as '" + path + "'";
@@ -953,12 +992,14 @@ void CloneStyle()
 				messageBox.message = "Overwrite existing style?";
 				messageBox.buttons = ImRad::Yes | ImRad::No;
 				messageBox.OpenPopup([=](ImRad::ModalResult mr) {
-					if (mr == ImRad::Yes)
+					if (mr == ImRad::Yes) {
 						DoCloneStyle(inputName.name);
+					}
 					});
 			}
-			else
+			else {
 				DoCloneStyle(inputName.name);
+			}
 		});
 }
 
@@ -1055,34 +1096,45 @@ void ToolbarUI()
 	const float BTN_SIZE = 30;
 	const auto& io = ImGui::GetIO();
 	if (ImGui::Button(ICON_FA_FILE " " ICON_FA_CARET_DOWN) ||
-		ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_N, ImGuiInputFlags_RouteGlobal))
+		ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_N, ImGuiInputFlags_RouteGlobal)) {
 		ImGui::OpenPopup("NewMenu");
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	}
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 		ImGui::SetTooltip("New File (Ctrl+N)");
+	}
 	ImGui::SetNextWindowPos(ImGui::GetCursorPos());
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 0, 10 });
 	if (ImGui::BeginPopup("NewMenu"))
 	{
-		if (ImGui::MenuItem(ICON_FA_TV " Main Window", "\tGLFW"))
+		if (ImGui::MenuItem(ICON_FA_TV " Main Window", "\tGLFW")) {
 			NewFile(TopWindow::MainWindow);
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+		}
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 			ImGui::SetTooltip("ImGui window integrated into OS window (GLFW)");
-		if (ImGui::MenuItem(ICON_FA_WINDOW_MAXIMIZE "  Window", ""))
+		}
+		if (ImGui::MenuItem(ICON_FA_WINDOW_MAXIMIZE "  Window", "")) {
 			NewFile(TopWindow::Window);
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+		}
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 			ImGui::SetTooltip("Floating ImGui window");
-		if (ImGui::MenuItem(ICON_FA_CLONE "  Popup", ""))
+		}
+		if (ImGui::MenuItem(ICON_FA_CLONE "  Popup", "")) {
 			NewFile(TopWindow::Popup);
-		if (ImGui::MenuItem(ICON_FA_WINDOW_RESTORE "  Modal Popup", ""))
+		}
+		if (ImGui::MenuItem(ICON_FA_WINDOW_RESTORE "  Modal Popup", "")) {
 			NewFile(TopWindow::ModalPopup);
-		if (ImGui::MenuItem(ICON_FA_MOBILE_SCREEN "  Activity", "\tAndroid"))
+		}
+		if (ImGui::MenuItem(ICON_FA_MOBILE_SCREEN "  Activity", "\tAndroid")) {
 			NewFile(TopWindow::Activity);
+		}
 		
 		ImGui::Separator();
-		if (ImGui::MenuItem(ICON_FA_FILE_PEN "  main.cpp", "\tGLFW"))
+		if (ImGui::MenuItem(ICON_FA_FILE_PEN "  main.cpp", "\tGLFW")) {
 			NewTemplate(0);
-		if (ImGui::MenuItem(ICON_FA_FILE_PEN "  main+java+manifest", "\tAndroid"))
+		}
+		if (ImGui::MenuItem(ICON_FA_FILE_PEN "  main+java+manifest", "\tAndroid")) {
 			NewTemplate(1);
+		}
 
 		ImGui::EndPopup();
 	}
@@ -1090,39 +1142,47 @@ void ToolbarUI()
 
 	ImGui::SameLine();
 	if (ImGui::Button(ICON_FA_FOLDER_OPEN) ||
-		ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_RouteGlobal))
+		ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_RouteGlobal)) {
 		OpenFile();
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	}
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 		ImGui::SetTooltip("Open File (Ctrl+O)");
+	}
 	
 	ImGui::BeginDisabled(activeTab < 0);
 	
 	ImGui::SameLine();
 	float cx = ImGui::GetCursorPosX();
 	if (ImGui::Button(ICON_FA_FLOPPY_DISK) ||
-		ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_RouteGlobal))
+		ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_RouteGlobal)) {
 		SaveFile(false);
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	}
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 		ImGui::SetTooltip("Save File (Ctrl+S)");
+	}
 	
 	ImGui::SameLine(0, 0);
 	ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
 	ImGui::SameLine(0, 0);
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 2, ImGui::GetStyle().FramePadding.y });
-	if (ImGui::Button(ICON_FA_CARET_DOWN)) 
+	if (ImGui::Button(ICON_FA_CARET_DOWN)) {
 		ImGui::OpenPopup("SaveMenu");
+	}
 	ImGui::PopStyleVar();
 	ImGui::SetNextWindowPos({ cx, ImGui::GetCursorPosY() });
 	if (ImGui::BeginPopup("SaveMenu"))
 	{
-		if (ImGui::MenuItem("Save As..."))
+		if (ImGui::MenuItem("Save As...")) {
 			SaveFileAs(false);
-		if (ImGui::MenuItem("Save All", "\tCtrl+Shift+S"))
+		}
+		if (ImGui::MenuItem("Save All", "\tCtrl+Shift+S")) {
 			SaveAll();
+		}
 		ImGui::EndPopup();
 	}
-	if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_S, ImGuiInputFlags_RouteGlobal))
+	if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_S, ImGuiInputFlags_RouteGlobal)) {
 		SaveAll();
+	}
 
 	ImGui::SameLine();
 	ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
@@ -1131,8 +1191,9 @@ void ToolbarUI()
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(100);
 	std::string styleName;
-	if (activeTab >= 0)
+	if (activeTab >= 0) {
 		styleName = fileTabs[activeTab].styleName;
+	}
 	if (ImGui::BeginCombo("##style", styleName.c_str()))
 	{
 		for (size_t i = 0; i < styleNames.size(); ++i)
@@ -1144,16 +1205,19 @@ void ToolbarUI()
 				fileTabs[activeTab].modified = true;
 				fileTabs[activeTab].styleName = styleNames[i].first;
 			}
-			if (i == 2 && i + 1 < styleNames.size())
+			if (i == 2 && i + 1 < styleNames.size()) {
 				ImGui::Separator();
+			}
 		}
 		ImGui::EndCombo();
 	}
 	ImGui::SameLine();
-	if (ImGui::Button(ICON_FA_CLONE))
+	if (ImGui::Button(ICON_FA_CLONE)) {
 		CloneStyle();
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	}
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 		ImGui::SetTooltip("Clone Style");
+	}
 	ImGui::SameLine();
 	ImGui::Text("Units");
 	ImGui::SameLine();
@@ -1161,8 +1225,9 @@ void ToolbarUI()
 	const std::string unit = activeTab >= 0 ? fileTabs[activeTab].unit : "";
 	std::array<const char*, 2> UNITS{ "px", /*"fs",*/ "dp" };
 	int usel = 0;
-	if (unit != "")
-		usel = (int)(stx::find(UNITS, unit) - UNITS.begin());
+	if (unit != "") {
+		usel = static_cast<int>(stx::find(UNITS, unit) - UNITS.begin());
+	}
 	if (ImGui::Combo("##units", &usel, stx::join(UNITS, std::string_view("\0", 1)).c_str())) // "px\0fs\0dp\0"))
 	{
 		auto& tab = fileTabs[activeTab];
@@ -1186,17 +1251,20 @@ void ToolbarUI()
 		horizLayout.OpenPopup();
 	}
 	ImGui::EndDisabled();
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 		ImGui::SetTooltip("Table Layout Helper");
+	}
 	ImGui::SameLine();
 	
 	ImGui::SameLine();
 	ImGui::BeginDisabled(activeTab < 0);
 	if (ImGui::Button(ICON_FA_BOLT) || // ICON_FA_BOLT, ICON_FA_RIGHT_TO_BRACKET) ||
-		ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_P, ImGuiInputFlags_RouteGlobal))
+		ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_P, ImGuiInputFlags_RouteGlobal)) {
 		ShowCode();
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	}
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 		ImGui::SetTooltip("Preview Code (Ctrl+P)");
+	}
 	ImGui::EndDisabled();
 	
 	ImGui::SameLine();
@@ -1207,8 +1275,9 @@ void ToolbarUI()
 		classWizard.modified = &fileTabs[activeTab].modified;
 		classWizard.OpenPopup();
 	}
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 		ImGui::SetTooltip("Class Wizard");
+	}
 	
 	ImGui::EndDisabled();
 	
@@ -1221,8 +1290,9 @@ void ToolbarUI()
 		std::vector<std::string> fontNames;
 		for (const auto& entry : fs::directory_iterator(rootPath + "/style/")) 
 		{
-			if (entry.is_regular_file() && entry.path().extension() == ".ttf")
+			if (entry.is_regular_file() && entry.path().extension() == ".ttf") {
 				fontNames.push_back(entry.path().stem().string());
+			}
 		}
 		settingsDlg.fontNames = std::move(fontNames);
 		settingsDlg.fontName = fontName.substr(0, fontName.size() - 4);
@@ -1265,10 +1335,12 @@ void ToolbarUI()
 			ImGui::Columns(n, nullptr, false);
 			for (const auto& tb : cat.second)
 			{
-				if (ImGui::Selectable(tb.label.c_str(), activeButton == tb.name, 0, ImVec2(BTN_SIZE, BTN_SIZE)))
+				if (ImGui::Selectable(tb.label.c_str(), activeButton == tb.name, 0, ImVec2(BTN_SIZE, BTN_SIZE))) {
 					NewWidget(tb.name);
-				if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && tb.name != "")
+				}
+				if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && tb.name != "") {
 					ImGui::SetTooltip("%s", tb.name.c_str());
+				}
 
 				ImGui::NextColumn();
 			}
@@ -1307,17 +1379,20 @@ void TabsUI()
 		{
 			const auto& tab = fileTabs[i];
 			std::string fname = fs::path(tab.fname).filename().string();
-			if (fname == "")
+			if (fname.empty()) {
 				fname = UNTITLED + std::to_string(++untitled);
-			if (tab.modified)
+			}
+			if (tab.modified) {
 				fname += " *";
+			}
 			bool notClosed = true;
 			if (ImGui::BeginTabItem(fname.c_str(), &notClosed, i == activeTab ? ImGuiTabItemFlags_SetSelected : 0))
 			{
 				ImGui::EndTabItem();
 			}
-			if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && tab.fname != "")
+			if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && tab.fname != "") {
 				ImGui::SetTooltip("%s", tab.fname.c_str());
+			}
 
 			if (!i)
 			{
@@ -1351,8 +1426,9 @@ void HierarchyUI()
 {
 	//ImGui::PushFont(ctx.defaultFont); icons are FA
 	ImGui::Begin("Hierarchy");
-	if (activeTab >= 0 && fileTabs[activeTab].rootNode) 
+	if (activeTab >= 0 && fileTabs[activeTab].rootNode) {
 		fileTabs[activeTab].rootNode->TreeUI(ctx);
+	}
 	ImGui::End();
 }
 
@@ -1360,8 +1436,9 @@ bool BeginPropGroup(const std::string& label, const UINode::Prop& prop, bool& op
 {
 	ImVec2 pad = ImGui::GetStyle().FramePadding;
 	ImGui::TableNextRow();
-	if (label == "overlayPos") //hack
+	if (label == "overlayPos") { //hack
 		ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(255, 255, 164, 255));
+	}
 	ImGui::TableSetColumnIndex(0);
 	ImGui::AlignTextToFramePadding();
 	ImGui::Unindent();
@@ -1374,8 +1451,9 @@ bool BeginPropGroup(const std::string& label, const UINode::Prop& prop, bool& op
 		eatProp = true;
 		ImGui::TableNextColumn();
 		bool tmp = prop.property->to_arg() == "true";
-		if (ImGui::Checkbox(("##" + prop.name).c_str(), &tmp))
+		if (ImGui::Checkbox(("##" + prop.name).c_str(), &tmp)) {
 			prop.property->set_from_arg(tmp ? "true" : "false");
+		}
 	}
 	else if (!open)
 	{
@@ -1432,12 +1510,13 @@ void PropertyRowsUI(bool pr)
 		{
 			std::vector<std::string_view> pn;
 			auto props = pr ? node->Properties() : node->Events();
-			for (auto& p : props)
+			for (auto& p : props) {
 				pn.push_back(p.name);
+			}
 			stx::sort(pn);
-			if (node == ctx.selected[0])
+			if (node == ctx.selected[0]) {
 				pnames = std::move(pn);
-			else {
+			} else {
 				std::vector<std::string_view> pres;
 				stx::set_intersection(pnames, pn, std::back_inserter(pres));
 				pnames = std::move(pres);
@@ -1459,14 +1538,16 @@ void PropertyRowsUI(bool pr)
 		for (int i = 0; i < (int)props.size(); ++i)
 		{
 			const auto& prop = props[i];
-			if (!stx::count(pnames, prop.name))
+			if (!stx::count(pnames, prop.name)) {
 				continue;
+			}
 			std::string cat;
 			auto i1 = prop.name.find('@');
 			if (i1 != std::string::npos) {
 				auto i2 = prop.name.find('.', i1);
-				if (i2 != std::string::npos)
+				if (i2 != std::string::npos) {
 					cat = prop.name.substr(i1 + 1, i2 - i1 - 1);
+				}
 			}
 			bool skip = false;
 			if (cat != inCat)
@@ -1477,13 +1558,16 @@ void PropertyRowsUI(bool pr)
 					skip = BeginPropGroup(cat, prop, catOpen);
 					ImGui::PushID(ctx.selected[0]);
 				}
-				else 
+				else {
 					EndPropGroup(catOpen);
+				}
 			}
-			if (inCat != "" && !catOpen)
+			if (inCat != "" && !catOpen) {
 				continue;
-			if (skip)
+			}
+			if (skip) {
 				continue;
+			}
 			ImGui::TableNextRow();
 			ImGui::TableSetColumnIndex(0);
 			ImGui::AlignTextToFramePadding();
@@ -1500,8 +1584,9 @@ void PropertyRowsUI(bool pr)
 				}
 			}
 		}
-		if (inCat != "")
+		if (inCat != "") {
 			EndPropGroup(catOpen);
+		}
 		ImGui::Unindent();
 		ImGui::PopID();
 		ImGui::EndTable();
@@ -1567,10 +1652,12 @@ void PopupUI()
 
 void Draw()
 {
-	if (activeTab < 0 || !fileTabs[activeTab].rootNode)
+	if (activeTab < 0 || !fileTabs[activeTab].rootNode) {
 		return;
-	if (reloadStyle) //eliminates flicker
+	}
+	if (reloadStyle) { //eliminates flicker
 		return;
+	}
 	
 	auto& tab = fileTabs[activeTab];
 	auto tmpStyle = ImGui::GetStyle();
@@ -1587,8 +1674,9 @@ void Draw()
 	if (ctx.isAutoSize && ctx.layoutHash != ctx.prevLayoutHash)
 	{
 		ctx.root->ResetLayout();
-		if (ctx.rootWin)
+		if (ctx.rootWin) {
 			ctx.rootWin->HiddenFramesCannotSkipItems = 2; //flicker removal
+		}
 	}
 
 	ImGui::PopFont();
@@ -1602,11 +1690,13 @@ std::vector<UINode*> SortSelection(const std::vector<UINode*>& sel)
 	std::vector<UINode*> children;
 	for (UINode* node : sel)
 	{
-		if (node == tab.rootNode.get())
+		if (node == tab.rootNode.get()) {
 			continue;
+		}
 		auto it = stx::find(allNodes, node);
-		if (it == allNodes.end())
+		if (it == allNodes.end()) {
 			continue;
+		}
 		auto ch = node->GetAllChildren();
 		assert(ch.size() && ch[0] == node);
 		children.insert(children.end(), ch.begin() + 1, ch.end());
@@ -1614,11 +1704,13 @@ std::vector<UINode*> SortSelection(const std::vector<UINode*>& sel)
 	std::vector<std::pair<int, UINode*>> sortedSel;
 	for (UINode* node : sel)
 	{
-		if (node == tab.rootNode.get())
+		if (node == tab.rootNode.get()) {
 			continue;
+		}
 		auto it = stx::find(allNodes, node);
-		if (it == allNodes.end() || stx::find(children, node) != children.end())
+		if (it == allNodes.end() || stx::find(children, node) != children.end()) {
 			continue;
+		}
 		sortedSel.push_back({ int(it - allNodes.begin()), node });
 		auto ch = node->GetAllChildren();
 		children.insert(children.end(), ch.begin(), ch.end());
@@ -1626,8 +1718,9 @@ std::vector<UINode*> SortSelection(const std::vector<UINode*>& sel)
 
 	stx::sort(sortedSel);
 	allNodes.clear();
-	for (const auto& sel : sortedSel)
+	for (const auto& sel : sortedSel) {
 		allNodes.push_back(sel.second);
+	}
 	return allNodes;
 }
 
@@ -1636,8 +1729,9 @@ RemoveSelected()
 {
 	auto& tab = fileTabs[activeTab];
 	std::vector<UINode*> sortedSel = SortSelection(ctx.selected);
-	if (sortedSel.empty())
+	if (sortedSel.empty()) {
 		return {};
+	}
 
 	std::vector<std::unique_ptr<Widget>> remove;
 	auto pi1 = tab.rootNode->FindChild(sortedSel[0]);
@@ -1667,10 +1761,11 @@ RemoveSelected()
 	{
 		if (pi1->second < pi1->first->children.size())
 			ctx.selected = { pi1->first->children[pi1->second].get() };
-		else if (pi1->second)
+		else if (pi1->second) {
 			ctx.selected = { pi1->first->children[pi1->second - 1].get() };
-		else
+		} else {
 			ctx.selected = { pi1->first };
+		}
 	}
 	else
 	{
@@ -1682,8 +1777,9 @@ RemoveSelected()
 
 void Work()
 {
-	if (ImGui::GetTopMostAndVisiblePopupModal())
+	if (ImGui::GetTopMostAndVisiblePopupModal()) {
 		return;
+	}
 
 	if (initErrors != "")
 	{
@@ -1727,15 +1823,16 @@ void Work()
 			assert(activeButton != "");
 			newNode->hasPos = true;
 			ImVec2 pos = ImGui::GetMousePos() - ctx.snapParent->cached_pos; //win->InnerRect.Min;
-			if (pos.x < ctx.snapParent->cached_size.x / 2)
+			if (pos.x < ctx.snapParent->cached_size.x / 2) {
 				newNode->pos_x = pos.x / ctx.zoomFactor;
-			else
+			} else {
 				newNode->pos_x = (pos.x - ctx.snapParent->cached_size.x) / ctx.zoomFactor;
-			if (pos.y < ctx.snapParent->cached_size.y / 2)
+			}
+			if (pos.y < ctx.snapParent->cached_size.y / 2) {
 				newNode->pos_y = pos.y / ctx.zoomFactor;
-			else
+			} else {
 				newNode->pos_y = (pos.y - ctx.snapParent->cached_size.y) / ctx.zoomFactor;
-
+			}
 			ctx.selected = { newNode.get() };
 			ctx.snapParent->children.push_back(std::move(newNode));
 			ctx.mode = UIContext::NormalSelection;
@@ -1775,8 +1872,9 @@ void Work()
 				for (size_t i = 0; i < ctx.snapIndex; ++i) 
 				{
 					auto* ch = ctx.snapParent->children[i].get();
-					if (!ch->hasPos && (ch->Behavior() & UINode::SnapSides))
+					if (!ch->hasPos && (ch->Behavior() & UINode::SnapSides)) {
 						firstItem = false;
+					}
 				}
 				newNodes[0]->sameLine = ctx.snapSameLine;
 				newNodes[0]->spacing = firstItem ? 0 : 1;
@@ -1793,8 +1891,9 @@ void Work()
 						newNodes[0]->spacing = next->spacing;
 						next->spacing = 1;
 					}
-					else
+					else {
 						next->spacing = std::max((int)next->spacing, 1);
+					}
 				}
 				if (ctx.snapClearNextNextColumn) 
 				{
@@ -1802,8 +1901,9 @@ void Work()
 					next->sameLine = false;
 					next->spacing = std::max((int)next->spacing, 1);
 				}
-				if (next->sameLine)
+				if (next->sameLine) {
 					next->indent = 0; //otherwise creates widgets overlaps
+				}
 			}
 			ctx.selected.clear();
 			if (activeButton != "")
@@ -1897,8 +1997,9 @@ void AddINIHandler()
 		};
 	ini_handler.ReadLineFn = [](ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
 		{
-			if (programState != Init)
+			if (programState != Init) {
 				return;
+			}
 			char buf[1000];
 			if (!strcmp((const char*)entry, "Recent")) {
 				int i;
@@ -1914,10 +2015,12 @@ void AddINIHandler()
 				}
 			}
 			else if (!strcmp((const char*)entry, "UI")) {
-				if (!strncmp(line, "FontName=", 9))
+				if (!strncmp(line, "FontName=", 9)) {
 					fontName = line + 9;
-				else if (!strncmp(line, "FontSize=", 9))
+				}
+				else if (!strncmp(line, "FontSize=", 9)) {
 					fontSize = (float)std::atof(line + 9);
+				}
 			}
 		};
 	ini_handler.ApplyAllFn = nullptr; 
@@ -1958,60 +2061,56 @@ std::string GetRootPath()
 #endif
 }
 
-#ifdef WIN32
-int WINAPI wWinMain(
-	HINSTANCE   hInstance,
-	HINSTANCE   hPrevInstance,
-	PWSTR       lpCmdLine,
-	int         nCmdShow
-) 
-{
-#else
-int main(int argc, const char* argv[]) 
-{
-#endif	
-	rootPath = GetRootPath();
-
-	// Setup window
-	glfwSetErrorCallback(glfw_error_callback);
-	if (!glfwInit())
-		return 1;
-
+std::string DoHintsForGlfw()
+{	
 	// Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 	// GL ES 2.0 + GLSL 100
-	const char* glsl_version = "#version 100";
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+	return "#version 100";
 #elif defined(__APPLE__)
 	// GL 3.2 + GLSL 150
-	const char* glsl_version = "#version 150";
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+	return "#version 150";
 #else
 	// GL 3.0 + GLSL 130
-	const char* glsl_version = "#version 130";
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
 	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+	return "#version 130";
 #endif
+}
 
+int InternalMain() {
+	rootPath = GetRootPath();
+
+	// Setup window
+	glfwSetErrorCallback(glfw_error_callback);
+	if (!glfwInit()) {
+		return 1;
+	}
+
+	const auto glsl_version = DoHintsForGlfw();
 	// Initialize the native file dialog
 	NFD_Init();
 
 	// Create window with graphics context
 	window = glfwCreateWindow(1280, 720, VER_STR.c_str(), NULL, NULL);
-	if (window == NULL)
+	if (window == NULL) {
 		return 1;
+	}
 	GLFWimage icons[2];
 	icons[0].pixels = stbi_load((rootPath + "/style/icon-40.png").c_str(), &icons[0].width, &icons[0].height, 0, 4);
 	icons[1].pixels = stbi_load((rootPath + "/style/icon-100.png").c_str(), &icons[1].width, &icons[1].height, 0, 4);
-	if (icons[0].pixels && icons[1].pixels)
+	if (icons[0].pixels && icons[1].pixels) {
 		glfwSetWindowIcon(window, 2, icons);
+	}
 	stbi_image_free(icons[0].pixels);
 	stbi_image_free(icons[1].pixels);
 	glfwMakeContextCurrent(window);
@@ -2030,7 +2129,7 @@ int main(int argc, const char* argv[])
 	io.UserData = &ioUserData;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;    // Enable Gamepad Controls
 	
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -2054,8 +2153,9 @@ int main(int argc, const char* argv[])
 		}
 		else if (programState == Shutdown) 
 		{
-			if (fileTabs.empty()) //Work() will close the tabs
+			if (fileTabs.empty()) { //Work() will close the tabs
 				break;
+			}
 		}
 		else if (programState == Run && glfwWindowShouldClose(window))
 		{
@@ -2069,7 +2169,6 @@ int main(int argc, const char* argv[])
 				//save state before files close
 				ImGui::SaveIniSettingsToDisk(ImGui::GetIO().IniFilename);
 				ImGui::GetIO().IniFilename = nullptr;
-
 			}
 		}
 
@@ -2089,8 +2188,9 @@ int main(int argc, const char* argv[])
 		ImGui::NewFrame();
 
 		bool visible = glfwGetWindowAttrib(window, GLFW_FOCUSED);
-		if (visible && !lastVisible)
+		if (visible && !lastVisible) {
 			ReloadFile();
+		}
 		lastVisible = visible;
 
 		DockspaceUI();
@@ -2128,3 +2228,14 @@ int main(int argc, const char* argv[])
 
 	return 0;
 }
+
+#ifdef WIN32
+int WINAPI wWinMain(
+	HINSTANCE   hInstance,
+	HINSTANCE   hPrevInstance,
+	PWSTR       lpCmdLine,
+	int         nCmdShow
+) { InternalMain(); }
+#else
+int main(int argc, const char* argv[]) { InternalMain(); }
+#endif
