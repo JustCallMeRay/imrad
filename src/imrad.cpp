@@ -1,12 +1,15 @@
 #if WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#undef min
-#undef max
-#undef MessageBox
+#    define WIN32_LEAN_AND_MEAN
+#    define NOMINMAX
+#    include <Windows.h>
+#    undef NOMINMAX
+#    undef WIN32_LEAN_AND_MEAN
+#    undef min
+#    undef max
+#    undef MessageBox
 #endif
 #if defined(__APPLE__)
-#include <mach-o/dyld.h>
+#    include <mach-o/dyld.h>
 #endif
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -19,7 +22,7 @@
 #include <fstream>
 #include <string>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
-#include <GLES2/gl2.h>
+#    include <GLES2/gl2.h>
 #endif
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <nfd.h>
